@@ -1,4 +1,4 @@
-# в новую ветку
+# в новую ветку 
 import time
 def console_greeting():  
     name = input("Введите ваше имя: ")  # запрос в терминале
