@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+works.json
+*.csv
+report.txt
