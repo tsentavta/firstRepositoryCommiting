@@ -76,9 +76,16 @@ TITLE_RE = re.compile("|".join(TITLE_PATTERNS), re.IGNORECASE)
 # --------------------------------------------------------------------------
 CATEGORIES = [
     ("Радиолокация, обнаружение и распознавание",
-     r"радиолокац|рлс(?![а-яё])|радар|обнаружен|распознаван|детектир|селекц|"
-     r"эпр(?![а-яё])|отражённ|отраженн|рассеян|доплер|сопровожден цел|"
-     r"radar|detection|recognition|tracking|(?<![a-z])rcs(?![a-z])"),
+     # tracking сужен намеренно: в литературе по БПЛА он чаще всего означает
+     # отслеживание траектории (теория управления), а не сопровождение цели.
+     r"(?<![а-яё])радиолокац|(?<![а-яё])рлс(?![а-яё])|(?<![а-яё])радар|"
+     r"обнаружен|распознаван|детектир|селекц\w*\s+(?:цел|движущ)|"
+     r"(?<![а-яё])эпр(?![а-яё])|отражённ|отраженн|рассеян|доп?плер|"
+     r"сопровожден\w*\s+цел|"
+     r"(?<![a-z])radars?(?![a-z])|detection|recognition|"
+     r"(?:target|object|multi-?target|visual|vehicle|drone|uavs?|pedestrian)"
+     r"\s+track(?:ing|er)?(?!\s+control)|"
+     r"track\w*\s+(?:of\s+)?(?:target|object)|(?<![a-z])rcs(?![a-z])"),
     ("РЭБ, противодействие и безопасность",
      r"рэб(?![а-яё])|радиоэлектронн\w* борьб|подавлен|глушен|спуфинг|"
      r"противодейств|перехват|защит|безопасност|уязвим|кибер|нейтрализац|"
@@ -179,7 +186,7 @@ def fetch_term(term, rows, issn, from_year, mailto):
             "filter": ",".join(filters),
             "rows": 100,
             "cursor": cursor,
-            "select": "DOI,title,container-title,issued,type,language,publisher,subject",
+            "select": "DOI,title,container-title,issued,type,publisher,subject",
         }
         if mailto:
             params["mailto"] = mailto
@@ -239,8 +246,17 @@ def cmd_fetch(args):
 # --------------------------------------------------------------------------
 # Классификация и статистика
 # --------------------------------------------------------------------------
+# В этих сочетаниях «detection» — диагностика, безопасность или название
+# прибора (LiDAR), а не обнаружение объекта. Слово гасится, определение
+# остаётся: «attacks detection» → «attacks» уходит в рубрику РЭБ, как и должно.
+DIAGNOSTIC_DETECTION = re.compile(
+    r"((?:fault|anomaly|failure|conflict|collision|intrusion|attack|damage|"
+    r"crack|defect|leak|disease|weed|light)s?)\s+detection", re.IGNORECASE)
+
+
 def classify(title):
     """Все подходящие рубрики для названия (multi-label)."""
+    title = DIAGNOSTIC_DETECTION.sub(r"\1", title)
     hits = [name for name, rx in CATEGORIES if rx.search(title)]
     return hits or [OTHER]
 
